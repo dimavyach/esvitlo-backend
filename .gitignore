@@ -1,0 +1,43 @@
+# === IntelliJ IDEA ===
+.idea/
+*.iml
+
+# === Maven / Gradle ===
+target/
+build/
+.mvn/wrapper/maven-wrapper.jar
+
+# === Logs ===
+*.log
+logs/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Environment / Secrets ===
+.env
+.env.*
+application-local.yml
+application-dev.yml
+application-prod.yml
+
+# ❗ якщо зберігаєш токени тут — НЕ КОМІТИТИ
+application.yml
+
+# === Database ===
+*.mv.db
+*.trace.db
+*.h2.db
+
+# === Test / tmp ===
+tmp/
+temp/
+
+# === Node (якщо колись буде frontend) ===
+node_modules/
+dist/
+
+# === Docker (опційно) ===
+.env.docker
+
