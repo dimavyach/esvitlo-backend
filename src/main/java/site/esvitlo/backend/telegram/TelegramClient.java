@@ -4,6 +4,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Component
 public class TelegramClient {
 
@@ -17,10 +20,24 @@ public class TelegramClient {
         this.restClient = RestClient.create("https://api.telegram.org");
     }
 
+    // Старий метод (для звичайних повідомлень)
     public void sendMessage(Long chatId, String text) {
+        sendMessage(chatId, text, null);
+    }
+
+    // НОВИЙ метод (з підтримкою кнопок)
+    public void sendMessage(Long chatId, String text, Object replyMarkup) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("chat_id", chatId);
+        body.put("text", text);
+
+        if (replyMarkup != null) {
+            body.put("reply_markup", replyMarkup);
+        }
+
         restClient.post()
-                .uri("/bot{token}/sendMessage?chat_id={chatId}&text={text}",
-                        botToken, chatId, text)
+                .uri("/bot{token}/sendMessage", botToken)
+                .body(body) // Spring автоматично перетворить Map у JSON
                 .retrieve()
                 .toBodilessEntity();
     }
@@ -32,5 +49,6 @@ public class TelegramClient {
                 .retrieve()
                 .body(String.class);
     }
+
 }
 

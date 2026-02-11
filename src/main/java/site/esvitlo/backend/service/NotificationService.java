@@ -30,7 +30,7 @@ public class NotificationService {
 
     private void notify(Device device, String text) {
         List<Subscription> subs =
-                subscriptionRepository.findByDeviceId(device.getId());
+                subscriptionRepository.findByDevice_Id(device.getId());
 
         for (Subscription sub : subs) {
             telegramClient.sendMessage(

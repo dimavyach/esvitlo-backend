@@ -28,7 +28,7 @@ public class Subscription {
     @JoinColumn(name = "channel_id")
     private Channel channel;
 
-    protected Subscription() {
+    public Subscription() {
     }
 
     public Subscription(Device device, Channel channel) {

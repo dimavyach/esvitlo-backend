@@ -45,5 +45,9 @@ public class Device {
         this.online = true;
     }
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
 }
 

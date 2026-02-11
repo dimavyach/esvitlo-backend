@@ -2,6 +2,7 @@ package site.esvitlo.backend.service;
 
 import org.springframework.transaction.annotation.Transactional;
 import site.esvitlo.backend.domain.Device;
+import site.esvitlo.backend.domain.User;
 import site.esvitlo.backend.repository.DeviceRepository;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
@@ -61,10 +62,45 @@ public class DeviceService {
         }
     }
 
-    public Device createDevice(String name) {
+    public Device createDevice(User user, String name) {
+
         String key = UUID.randomUUID().toString();
+
         Device device = new Device(key, name);
+        device.setUser(user);
+
         return repository.save(device);
     }
+
+    //status
+    public String buildStatus(String deviceKey) {
+
+        Device device = findByKeyOrThrow(deviceKey);
+
+        Instant lastSeen = device.getLastSeen();
+        boolean online = device.isOnline();
+
+        long seconds = Duration.between(lastSeen, Instant.now()).getSeconds();
+
+        String timeText;
+        if (seconds < 60) {
+            timeText = seconds + " sec ago";
+        } else if (seconds < 3600) {
+            timeText = (seconds / 60) + " min ago";
+        } else {
+            timeText = (seconds / 3600) + " h ago";
+        }
+
+        return """
+        📱 %s
+        Status: %s
+        Last ping: %s
+        """.formatted(
+                device.getName(),
+                online ? "ONLINE" : "OFFLINE",
+                timeText
+        );
+    }
+
 }
 

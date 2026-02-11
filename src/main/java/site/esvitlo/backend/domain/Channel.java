@@ -25,7 +25,7 @@ public class Channel {
     @Column(nullable = false)
     private Instant createdAt;
 
-    protected Channel() {
+    public Channel() {
     }
 
     public Channel(Long chatId, ChannelType type) {
@@ -33,6 +33,10 @@ public class Channel {
         this.type = type;
         this.createdAt = Instant.now();
     }
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 }
 
 
