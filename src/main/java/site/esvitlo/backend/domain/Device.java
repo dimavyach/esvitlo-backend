@@ -45,7 +45,5 @@ public class Device {
         this.online = true;
     }
 
-    public void setOnline(boolean b) {
-    }
 }
 

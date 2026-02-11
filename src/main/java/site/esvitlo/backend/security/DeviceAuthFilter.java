@@ -5,12 +5,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.filter.OncePerRequestFilter;
-import site.esvitlo.backend.domain.Device;
-import site.esvitlo.backend.service.DeviceService;
 
 import java.io.IOException;
 
 public class DeviceAuthFilter extends OncePerRequestFilter {
+
+    public static final String DEVICE_KEY_ATTR = "deviceKey";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -39,7 +39,7 @@ public class DeviceAuthFilter extends OncePerRequestFilter {
 
         // ❗ НЕ перевіряємо БД тут
         // ❗ ТІЛЬКИ валідність заголовка
-
+        request.setAttribute(DEVICE_KEY_ATTR, deviceKey);
         filterChain.doFilter(request, response);
     }
 }

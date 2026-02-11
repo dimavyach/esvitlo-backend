@@ -37,7 +37,7 @@ public class BotAdminService {
     @Transactional
     public String bind(Long chatId, String deviceKey) {
 
-        Channel channel = (Channel) channelRepo.findByChatId(chatId)
+        Channel channel = channelRepo.findByChatId(chatId)
                 .orElseThrow(() -> new IllegalArgumentException("Канал не знайдено. Спочатку add_channel."));
 
         Device device = deviceRepo.findByDeviceKey(deviceKey)

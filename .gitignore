@@ -22,7 +22,6 @@ application-local.yml
 application-dev.yml
 application-prod.yml
 
-# ❗ якщо зберігаєш токени тут — НЕ КОМІТИТИ
 application.yml
 
 # === Database ===
@@ -30,14 +29,13 @@ application.yml
 *.trace.db
 *.h2.db
 
-# === Test / tmp ===
+
 tmp/
 temp/
 
-# === Node (якщо колись буде frontend) ===
+
 node_modules/
 dist/
 
-# === Docker (опційно) ===
 .env.docker
 

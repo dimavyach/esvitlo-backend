@@ -1,12 +1,15 @@
 package site.esvitlo.backend.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.server.ResponseStatusException;
 import site.esvitlo.backend.domain.Device;
+import site.esvitlo.backend.security.DeviceAuthFilter;
 import site.esvitlo.backend.service.DeviceService;
 
 @RestController
@@ -22,8 +25,10 @@ public class PingController {
     @PostMapping("/ping")
     public ResponseEntity<Void> ping(HttpServletRequest request) {
 
-        String auth = request.getHeader("Authorization");
-        String deviceKey = auth.substring(7).trim(); // "Device "
+        Object attr = request.getAttribute(DeviceAuthFilter.DEVICE_KEY_ATTR);
+        if (!(attr instanceof String deviceKey) || deviceKey.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
 
         Device device = deviceService.findByKeyOrThrow(deviceKey);
         deviceService.registerPing(device);
