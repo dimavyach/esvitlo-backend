@@ -6,7 +6,10 @@ import org.springframework.transaction.annotation.Transactional;
 import site.esvitlo.backend.domain.*;
 import site.esvitlo.backend.repository.*;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,61 +30,52 @@ public class BotAdminService {
     }
 
     public String buildDevicesList(User user) {
-
-        List<Device> devices =
-                deviceRepo.findByUserId(user.getId());
+        List<Device> devices = deviceRepo.findByUserId(user.getId());
 
         if (devices.isEmpty()) {
             return """
                    📭 У вас поки що немає пристроїв.
                    
-                   ➜ Додайте перший:
-                   add_device <назва>
+                   ➜ Додайте перший через меню Add Device.
                    """;
         }
 
         StringBuilder sb = new StringBuilder("📱 Ваші пристрої:\n\n");
 
         for (Device d : devices) {
+            String status = d.isOnline() ? "🟢 ONLINE" : "🔴 OFFLINE";
 
-            String status = d.isOnline()
-                    ? "🟢 ONLINE"
-                    : "🔴 OFFLINE";
+            // Отримуємо список каналів, куди цей пристрій шле сповіщення
+            List<Subscription> subs = subscriptionRepo.findByDevice_Id(d.getId());
+            String linkedChannels = subs.isEmpty()
+                    ? "немає"
+                    : subs.stream()
+                    .map(s -> String.valueOf(s.getChannel().getChatId()))
+                    .collect(Collectors.joining(", "));
 
-            sb.append("• ")
-                    .append(d.getName())
-                    .append(" — ")
-                    .append(status)
-                    .append("\nKey: ")
-                    .append(d.getDeviceKey().substring(0, 8))
-                    .append("...\n\n");
+            sb.append("========================\n")
+                    .append("Назва: ").append(d.getName()).append("\n")
+                    .append("Статус: ").append(status).append("\n")
+                    .append("Ключ: ").append(d.getDeviceKey()).append("\n")
+                    .append("Канали: ").append(linkedChannels).append("\n");
         }
+        sb.append("========================");
 
         return sb.toString();
     }
 
     public String buildStatus(User user) {
-
-        List<Device> devices =
-                deviceRepo.findByUserId(user.getId());
-
-        if (devices.isEmpty()) {
-            return "📭 У вас немає пристроїв.";
-        }
+        List<Device> devices = deviceRepo.findByUserId(user.getId());
+        if (devices.isEmpty()) return "📭 У вас немає пристроїв.";
 
         StringBuilder sb = new StringBuilder("📊 Статус світла:\n\n");
 
         for (Device d : devices) {
+            String status = d.isOnline() ? "⚡ Світло Є" : "❌ Світла НЕМАЄ";
+            String timeAgo = formatDuration(d.getLastSeen());
 
-            String status = d.isOnline()
-                    ? "⚡ Світло є"
-                    : "❌ Світло відсутнє";
-
-            sb.append("• ")
-                    .append(d.getName())
-                    .append(" → ")
-                    .append(status)
-                    .append("\n");
+            sb.append(status).append(" — ").append(d.getName()).append("\n")
+                    .append("🕒 Оновлено: ").append(timeAgo).append("\n\n");
         }
 
         return sb.toString();
@@ -93,22 +87,10 @@ public class BotAdminService {
 
     @Transactional
     public String addChannel(User user, Long chatId) {
+        channelRepo.findByChatId(chatId)
+                .orElseGet(() -> createNewChannel(user, chatId));
 
-        Channel channel = channelRepo
-                .findByChatId(chatId)
-                .orElseGet(() -> {
-                    Channel ch = new Channel();
-                    ch.setChatId(chatId);
-                    ch.setUser(user);
-                    return channelRepo.save(ch);
-                });
-
-        return """
-               ✅ Канал додано.
-               
-               ➜ Тепер привʼяжіть пристрій:
-               bind <device_key> <chat_id>
-               """;
+        return "✅ Канал додано і готовий до роботи.";
     }
 
     // =========================
@@ -124,9 +106,9 @@ public class BotAdminService {
             throw new IllegalArgumentException("Цей пристрій вам не належить.");
         }
 
-        Channel channel = channelRepo
-                .findByChatId(chatId)
-                .orElseThrow(() -> new IllegalArgumentException("Канал не знайдено."));
+        // Автоматично створюємо канал, якщо його немає
+        Channel channel = channelRepo.findByChatId(chatId)
+                .orElseGet(() -> createNewChannel(user, chatId));
 
         boolean exists = subscriptionRepo
                 .findByDeviceAndChannel(device, channel)
@@ -143,10 +125,10 @@ public class BotAdminService {
         subscriptionRepo.save(sub);
 
         return """
-               🔗 Пристрій успішно привʼязано!
+               🔗 Успішно!
                
-               Тепер ви будете отримувати повідомлення про зміну статусу.
-               """;
+               Пристрій "%s" привʼязано до каналу %d.
+               """.formatted(device.getName(), chatId);
     }
 
     // =========================
@@ -155,26 +137,45 @@ public class BotAdminService {
 
     @Transactional
     public String unbind(User user, Long chatId, String deviceKey) {
-
         Device device = deviceService.findByKeyOrThrow(deviceKey);
 
-        if (!device.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("Цей пристрій вам не належить.");
-        }
-
-        Channel channel = channelRepo
-                .findByChatId(chatId)
+        Channel channel = channelRepo.findByChatId(chatId)
                 .orElseThrow(() -> new IllegalArgumentException("Канал не знайдено."));
 
         Subscription sub = subscriptionRepo
                 .findByDeviceAndChannel(device, channel)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Привʼязку не знайдено.")
-                );
+                .orElseThrow(() -> new IllegalArgumentException("Привʼязку не знайдено."));
 
         subscriptionRepo.delete(sub);
 
-        return "❌ Пристрій відвʼязано від каналу.";
+        return "🔓 Пристрій відвʼязано від каналу " + chatId;
+    }
+
+    // =========================
+    // HELPER METHODS
+    // =========================
+
+    private Channel createNewChannel(User user, Long chatId) {
+        Channel ch = new Channel();
+        ch.setChatId(chatId);
+        ch.setUser(user);
+        ch.setType(ChannelType.CHANNEL);
+        ch.setCreatedAt(Instant.now());
+        return channelRepo.save(ch);
+    }
+
+    private String formatDuration(Instant lastSeen) {
+        long seconds = Duration.between(lastSeen, Instant.now()).getSeconds();
+
+        if (seconds < 60) {
+            return seconds + " сек тому";
+        } else if (seconds < 3600) {
+            return (seconds / 60) + " хв тому";
+        } else if (seconds < 86400) {
+            return (seconds / 3600) + " год тому";
+        } else {
+            return (seconds / 86400) + " дн тому";
+        }
     }
 }
 
